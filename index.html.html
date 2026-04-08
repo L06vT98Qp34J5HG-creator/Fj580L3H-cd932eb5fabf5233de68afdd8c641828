@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lucky Draw</title>
+  <style>
+    /* Lucky Draw title: back halo + image glow and subtle scale */
+    .page-title-wrap {
+      position: absolute;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 10;
+      pointer-events: none;
+      width: min(92vw, 380px);
+      max-width: 100%;
+    }
+
+    .page-title-wrap::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 52%;
+      z-index: 0;
+      width: 125%;
+      height: 85%;
+      min-height: 72px;
+      transform: translate(-50%, -50%);
+      background: radial-gradient(
+        ellipse 72% 88% at 50% 48%,
+        rgba(255, 240, 180, 0.55) 0%,
+        rgba(255, 210, 80, 0.28) 38%,
+        transparent 68%
+      );
+      animation: titleHaloPulse 2.6s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    @keyframes titleHaloPulse {
+      0%,
+      100% {
+        opacity: 0.55;
+        transform: translate(-50%, -50%) scale(0.94);
+      }
+      50% {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1.08);
+      }
+    }
+
+    .page-title-img {
+      position: relative;
+      z-index: 1;
+      display: block;
+      width: 100%;
+      height: auto;
+      margin: 0 auto;
+      animation: titleImgGoldPulse 2.6s ease-in-out infinite;
+    }
+
+    @keyframes titleImgGoldPulse {
+      0%,
+      100% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 16px rgba(255, 215, 0, 0.55))
+          drop-shadow(0 0 32px rgba(255, 200, 60, 0.28))
+          drop-shadow(0 4px 18px rgba(0, 0, 0, 0.5));
+      }
+      50% {
+        transform: scale(1.045);
+        filter: drop-shadow(0 0 28px rgba(255, 245, 200, 0.95))
+          drop-shadow(0 0 52px rgba(255, 215, 0, 0.55))
+          drop-shadow(0 0 80px rgba(255, 180, 40, 0.35))
+          drop-shadow(0 4px 14px rgba(0, 0, 0, 0.45));
+      }
+    }
+    :root {
+      --bg-deep: #0a0e17;
+      --bg-panel: #121a2b;
+      --accent-gold: #ffd700;
+      --accent-gold-dim: #b8860b;
+      --text: #e8eef8;
+      --muted: #8899bb;
+      --danger: #ff3344;
+      --glow: rgba(255, 215, 0, 0.45);
+      /*
+        Pushes the lottery block down (space above JACKPOT ROLL + PLAY NOW):
+        - Unit: px; larger values move the block lower.
+        - Typical range ~0–160; if too large it may sit near the bottom—tweak body padding-top to match the background.
+      */
+      --lottery-section-push: 80px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Background 9:16 portrait, centered; solid side bars on wide screens */
+    body::before {
+      content: "";
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      z-index: -1;
+      width: min(100vw, calc(100vh * 9 / 16));
+      height: min(100vh, calc(100vw * 16 / 9));
+      pointer-events: none;
+      background:
+        radial-gradient(circle 14px at 12% 22%, #ffffff 0%, #ffe566 35%, #ffd700 52%, transparent 58%),
+        radial-gradient(circle 12px at 78% 55%, #fffef0 0%, #ffd700 48%, transparent 60%),
+        radial-gradient(circle 13px at 48% 82%, #ffffff 0%, #ffc800 45%, transparent 58%),
+        linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)),
+        url("bg.png") center/cover no-repeat,
+        radial-gradient(ellipse 120% 80% at 50% -20%, #1a2840 0%, transparent 55%),
+        radial-gradient(ellipse 80% 50% at 80% 100%, #152238 0%, transparent 50%),
+        var(--bg-deep);
+    }
+
+    /*
+      Gold sparkles: use body::after at z-index:-1 with the same stacking as body::before.
+      A standalone fixed div may not paint in some layouts (flex, stacking contexts).
+      ::after stacks above ::before (bg), still below main content (negative z-index vs in-flow).
+    */
+    body::after {
+      content: "";
+      position: fixed;
+      left: 50%;
+      top: 50%;
+      width: min(100vw, calc(100vh * 9 / 16));
+      height: min(100vh, calc(100vw * 16 / 9));
+      max-width: 100vw;
+      max-height: 100vh;
+      z-index: -1;
+      pointer-events: none;
+      background-repeat: no-repeat;
+      background-size: 100% 100%;
+      background-image:
+        radial-gradient(circle 10px at 7% 14%, #ffffff 0%, #ffe566 30%, #ffd700 55%, transparent 62%),
+        radial-gradient(circle 8px at 19% 36%, #fff8c8 0%, #ffd700 50%, transparent 60%),
+        radial-gradient(circle 9px at 31% 18%, #ffffff 0%, rgba(255, 215, 0, 0.95) 45%, transparent 58%),
+        radial-gradient(circle 7px at 44% 52%, #ffd700 0%, rgba(255, 200, 60, 0.9) 48%, transparent 62%),
+        radial-gradient(circle 8px at 56% 22%, #fffef5 0%, #ffd700 42%, transparent 58%),
+        radial-gradient(circle 6px at 69% 41%, #ffd700 0%, transparent 58%),
+        radial-gradient(circle 11px at 81% 64%, #fff4a8 0%, #ffd700 40%, transparent 65%),
+        radial-gradient(circle 7px at 91% 29%, #ffffff 0%, #ffd700 48%, transparent 58%),
+        radial-gradient(circle 8px at 13% 68%, #ffd700 0%, rgba(255, 230, 120, 0.95) 50%, transparent 62%),
+        radial-gradient(circle 9px at 37% 84%, #fff 0%, #ffc800 45%, transparent 60%),
+        radial-gradient(circle 7px at 52% 91%, #ffe566 0%, #ffd700 50%, transparent 58%),
+        radial-gradient(circle 8px at 66% 76%, #ffffff 0%, #ffd700 46%, transparent 58%),
+        radial-gradient(circle 6px at 84% 88%, #ffd700 0%, transparent 56%),
+        radial-gradient(circle 9px at 96% 52%, #fff8dc 0%, #ffd700 44%, transparent 62%),
+        radial-gradient(circle 7px at 25% 58%, rgba(255, 255, 255, 0.95) 0%, #ffd700 48%, transparent 58%),
+        radial-gradient(circle 8px at 48% 38%, #ffd700 0%, transparent 58%);
+      transform: translate(-50%, -50%);
+      animation: bodySparkleDrift 22s linear infinite;
+    }
+
+    @keyframes bodySparkleDrift {
+      0%,
+      100% {
+        transform: translate(-50%, -50%) translateY(0);
+      }
+      50% {
+        transform: translate(-50%, -50%) translateY(-42px);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      body::after {
+        animation: none;
+        transform: translate(-50%, -50%);
+        opacity: 0.85;
+      }
+      .page-title-wrap::before {
+        animation: none;
+        opacity: 0.65;
+        transform: translate(-50%, -50%) scale(1);
+      }
+      .page-title-img {
+        animation: none;
+        transform: none;
+        filter: drop-shadow(0 0 18px rgba(255, 215, 0, 0.5));
+      }
+      .lottery-card {
+        animation: none;
+      }
+      .reel-window {
+        animation: none;
+      }
+      .reel-highlight {
+        animation: none;
+      }
+      .spin-btn:not(:disabled) {
+        animation: none;
+      }
+    }
+
+    body {
+      min-height: 100vh;
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: var(--bg-deep);
+      color: var(--text);
+      
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      padding-top: 260px;
+    }
+    .bg-girl {
+      position: absolute;
+      top: 180px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 360px;
+      max-width: min(92vw, 420px);
+
+      z-index: 4;
+      pointer-events: none;
+    }
+    .page-title {
+      font-size: clamp(1.5rem, 4vw, 2rem);
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      background: linear-gradient(135deg, #fff8e0 0%, var(--accent-gold) 50%, var(--accent-gold-dim) 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      margin-bottom: 8px;
+      text-shadow: 0 0 40px var(--glow);
+    }
+
+    .lottery-card {
+      position: relative;
+      z-index: 5;
+      margin-top: var(--lottery-section-push);
+      width: min(100%, 300px);
+      background: linear-gradient(145deg, #1c2638 0%, var(--bg-panel) 100%);
+      border: 1px solid rgba(255, 215, 0, 0.25);
+      border-radius: 12px;
+      padding: 18px 14px 20px;
+      box-shadow:
+        0 0 0 1px rgba(0, 0, 0, 0.4),
+        0 20px 50px rgba(0, 0, 0, 0.45),
+        0 0 72px rgba(255, 215, 0, 0.14),
+        0 0 1px rgba(255, 230, 120, 0.35);
+      animation: lotteryCardGlow 3.2s ease-in-out infinite;
+    }
+
+    @keyframes lotteryCardGlow {
+      0%,
+      100% {
+        border-color: rgba(255, 220, 100, 0.38);
+        box-shadow:
+          0 0 0 1px rgba(0, 0, 0, 0.4),
+          0 20px 50px rgba(0, 0, 0, 0.45),
+          0 0 72px rgba(255, 215, 0, 0.14),
+          0 0 1px rgba(255, 230, 120, 0.35);
+      }
+      50% {
+        border-color: rgba(255, 245, 180, 0.85);
+        box-shadow:
+          0 0 0 1px rgba(255, 215, 0, 0.25),
+          0 20px 50px rgba(0, 0, 0, 0.38),
+          0 0 100px rgba(255, 215, 0, 0.42),
+          0 0 140px rgba(255, 200, 80, 0.22),
+          0 0 2px rgba(255, 240, 200, 0.9);
+      }
+    }
+
+    .reel-label {
+      text-align: center;
+      margin-top: -6px;
+      margin-bottom: 14px;
+    }
+
+    /* Vertical motion from bottom script (requestAnimationFrame); glow uses static filter */
+    .reel-label-text {
+      display: inline-block;
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: 0.2em;
+      background: linear-gradient(
+        135deg,
+        #fffef5 0%,
+        #fff4b0 22%,
+        var(--accent-gold) 48%,
+        #e8c008 72%,
+        var(--accent-gold-dim) 100%
+      );
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      filter:
+        drop-shadow(0 0 10px rgba(255, 215, 0, 0.85))
+        drop-shadow(0 0 26px rgba(255, 200, 80, 0.55))
+        drop-shadow(0 2px 0 rgba(0, 0, 0, 0.35));
+    }
+
+    .reel-window {
+      position: relative;
+      height: 70px;
+      overflow: hidden;
+      border-radius: 9px;
+      background: linear-gradient(180deg, #0d121c 0%, #151d2e 50%, #0d121c 100%);
+      box-shadow: inset 0 4px 20px rgba(0, 0, 0, 0.6);
+      border: 2px solid rgba(255, 215, 0, 0.35);
+      animation: reelWindowShine 2.2s ease-in-out infinite;
+    }
+
+    @keyframes reelWindowShine {
+      0%,
+      100% {
+        border-color: rgba(255, 215, 0, 0.42);
+        box-shadow:
+          inset 0 4px 20px rgba(0, 0, 0, 0.6),
+          0 0 8px rgba(255, 200, 0, 0.12);
+      }
+      50% {
+        border-color: rgba(255, 250, 220, 0.95);
+        box-shadow:
+          inset 0 4px 20px rgba(0, 0, 0, 0.5),
+          0 0 22px rgba(255, 215, 0, 0.45),
+          0 0 36px rgba(255, 190, 60, 0.25);
+      }
+    }
+
+    .reel-window::before,
+    .reel-window::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      height: 22px;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .reel-window::before {
+      top: 0;
+      background: linear-gradient(180deg, rgba(10, 14, 23, 0.95), transparent);
+    }
+
+    .reel-window::after {
+      bottom: 0;
+      background: linear-gradient(0deg, rgba(10, 14, 23, 0.95), transparent);
+    }
+
+    .reel-highlight {
+      position: absolute;
+      top: 50%;
+      left: 5px;
+      right: 5px;
+      height: 57px;
+      margin-top: -29px;
+      border: 2px solid rgba(255, 215, 0, 0.55);
+      border-radius: 8px;
+      box-shadow:
+        0 0 20px rgba(255, 215, 0, 0.25),
+        inset 0 0 20px rgba(255, 215, 0, 0.08);
+      z-index: 1;
+      pointer-events: none;
+      animation: reelHighlightPulse 2s ease-in-out infinite;
+    }
+
+    @keyframes reelHighlightPulse {
+      0%,
+      100% {
+        border-color: rgba(255, 215, 0, 0.5);
+        box-shadow:
+          0 0 18px rgba(255, 215, 0, 0.3),
+          inset 0 0 18px rgba(255, 215, 0, 0.1);
+      }
+      50% {
+        border-color: rgba(255, 240, 160, 0.95);
+        box-shadow:
+          0 0 28px rgba(255, 220, 100, 0.65),
+          0 0 40px rgba(255, 200, 60, 0.3),
+          inset 0 0 24px rgba(255, 215, 0, 0.2);
+      }
+    }
+
+    .reel-strip {
+      will-change: transform;
+    }
+
+    .reel-item {
+      height: 70px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .reel-item.grand {
+      color: var(--accent-gold);
+      text-shadow:
+        0 0 12px var(--glow),
+        0 0 28px rgba(255, 200, 50, 0.35);
+      animation: grandPulse 2s ease-in-out infinite;
+    }
+
+    @keyframes grandPulse {
+      0%, 100% { filter: brightness(1); }
+      50% { filter: brightness(1.15); }
+    }
+
+    .spin-btn {
+      display: block;
+      width: 100%;
+      margin-top: 16px;
+      padding: 10px 18px;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      color: #1a1508;
+      background: linear-gradient(180deg, #ffe566 0%, var(--accent-gold) 40%, #c9a008 100%);
+      border: none;
+      border-radius: 999px;
+      cursor: pointer;
+      box-shadow:
+        0 4px 0 #8a6a00,
+        0 8px 24px rgba(255, 200, 0, 0.35);
+      transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+    }
+
+    .spin-btn:not(:disabled) {
+      animation: spinBtnIdlePulse 2s ease-in-out infinite;
+    }
+
+    @keyframes spinBtnIdlePulse {
+      0%,
+      100% {
+        box-shadow:
+          0 4px 0 #8a6a00,
+          0 8px 26px rgba(255, 200, 0, 0.48),
+          0 0 20px rgba(255, 215, 0, 0.25);
+      }
+      50% {
+        box-shadow:
+          0 4px 0 #8a6a00,
+          0 10px 36px rgba(255, 230, 140, 0.75),
+          0 0 48px rgba(255, 200, 0, 0.55),
+          0 0 72px rgba(255, 180, 40, 0.3);
+      }
+    }
+
+    .spin-btn:hover:not(:disabled) {
+      animation: none;
+      filter: brightness(1.08);
+      box-shadow:
+        0 4px 0 #8a6a00,
+        0 12px 32px rgba(255, 200, 0, 0.5);
+      transform: translateY(-2px);
+    }
+
+    .spin-btn:active:not(:disabled) {
+      transform: translateY(2px);
+      box-shadow: 0 2px 0 #8a6a00, 0 4px 16px rgba(255, 200, 0, 0.3);
+    }
+
+    .spin-btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      filter: grayscale(0.3);
+    }
+
+    /* Modal */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(5, 8, 14, 0.82);
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 100;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.35s ease, visibility 0.35s ease;
+    }
+
+    .overlay.open {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal {
+      width: min(100%, 400px);
+      background: linear-gradient(165deg, #1e2a42 0%, #121a2b 100%);
+      border: 1px solid rgba(255, 215, 0, 0.4);
+      border-radius: 18px;
+      padding: 28px 24px 24px;
+      box-shadow:
+        0 24px 60px rgba(0, 0, 0, 0.55),
+        0 0 80px rgba(255, 215, 0, 0.12);
+      transform: scale(0.92);
+      transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .overlay.open .modal {
+      transform: scale(1);
+    }
+
+    .modal-title {
+      font-size: 1.15rem;
+      line-height: 1.55;
+      text-align: center;
+      margin-bottom: 22px;
+      color: var(--text);
+    }
+
+    .modal-title strong {
+      color: var(--accent-gold);
+      text-shadow: 0 0 16px var(--glow);
+    }
+
+    .claim-btn {
+      width: 100%;
+      padding: 14px;
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      color: #1a1508;
+      background: linear-gradient(180deg, #6ee7a8 0%, #22c55e 45%, #15803d 100%);
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      box-shadow:
+        0 4px 0 #0f5c2e,
+        0 8px 24px rgba(34, 197, 94, 0.35);
+      transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+    }
+
+    .claim-btn:hover {
+      filter: brightness(1.08);
+      box-shadow:
+        0 4px 0 #0f5c2e,
+        0 12px 28px rgba(34, 197, 94, 0.45);
+      transform: translateY(-2px);
+    }
+
+    .claim-btn:active {
+      transform: translateY(1px);
+      box-shadow: 0 2px 0 #0f5c2e, 0 4px 16px rgba(34, 197, 94, 0.3);
+    }
+
+    .countdown-wrap {
+      margin-top: 18px;
+      text-align: center;
+    }
+
+    .countdown-text {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--danger);
+      text-shadow: 0 0 12px rgba(255, 51, 68, 0.5);
+      animation: urgencyBlink 1.2s ease-in-out infinite;
+    }
+
+    .countdown-text.low {
+      animation: urgencyBlink 0.55s ease-in-out infinite, shake 0.4s ease-in-out infinite;
+    }
+
+    @keyframes urgencyBlink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.72; }
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-2px); }
+      75% { transform: translateX(2px); }
+    }
+  </style>
+</head>
+<body>
+  <div class="page-title-wrap">
+    <img src="title.png" class="page-title-img" alt="" />
+  </div>
+  <img src="girl.png" class="bg-girl" />
+
+  <div class="lottery-card">
+    <p class="reel-label"><span class="reel-label-text" id="reelLabelText">JACKPOT ROLL</span></p>
+    <div class="reel-window" id="reelWindow">
+      <div class="reel-highlight"></div>
+      <div class="reel-strip" id="reelStrip"></div>
+    </div>
+    <button type="button" class="spin-btn" id="spinBtn">PLAY NOW</button>
+  </div>
+
+  <div class="overlay" id="overlay" aria-hidden="true">
+    <div class="modal" role="dialog" aria-labelledby="modalMsg">
+      <p class="modal-title" id="modalMsg">
+        Congratulations! You won the grand prize <strong>RM8,888</strong>! Claim your reward now!
+      </p>
+      <button type="button" class="claim-btn" id="claimBtn">Claim now</button>
+      <div class="countdown-wrap">
+        <p class="countdown-text" id="countdownText">
+          Complete your claim within <span id="timeSpan">03:00</span> or this reward will expire.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+      /* JACKPOT ROLL float: rAF sets transform (CSS @keyframes unreliable in some browsers) */
+    (function () {
+      var el = document.getElementById("reelLabelText");
+      if (!el) return;
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      var start = performance.now();
+      var periodMs = 2600;
+      var ampPx = 12;
+      function tick(now) {
+        var phase = ((now - start) / periodMs) * Math.PI * 2;
+        var y = Math.sin(phase) * ampPx;
+        el.style.transform = "translateY(" + y + "px) translateZ(0)";
+        requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    })();
+
+    (function () {
+      var PRIZES = [
+        { text: "RM8,888", grand: true },
+        { text: "RM588", grand: false },
+        { text: "x10 Reward", grand: false },
+        { text: "x5 Reward", grand: false },
+        { text: "RM10", grand: false },
+        { text: "RM5", grand: false }
+      ];
+
+      var ITEM_HEIGHT = 70;
+      var reelStrip = document.getElementById("reelStrip");
+      var spinBtn = document.getElementById("spinBtn");
+      var overlay = document.getElementById("overlay");
+      var claimBtn = document.getElementById("claimBtn");
+      var countdownText = document.getElementById("countdownText");
+      var timeSpan = document.getElementById("timeSpan");
+
+      /* Long prize strip; must stop on RM8,888 (index % 6 === 0); scroll stays within strip height */
+      var cycles = 120;
+      var items = [];
+      for (var c = 0; c < cycles; c++) {
+        for (var i = 0; i < PRIZES.length; i++) {
+          items.push(PRIZES[i]);
+        }
+      }
+
+      var extraRounds = 8;
+      var fullCycle = PRIZES.length * ITEM_HEIGHT;
+      var maxScroll = (items.length - 1) * ITEM_HEIGHT;
+      var maxIndex = Math.floor((maxScroll - extraRounds * fullCycle) / ITEM_HEIGHT);
+      var winningIndex = Math.floor(maxIndex / 6) * 6;
+      if (winningIndex < 0) winningIndex = 0;
+
+      items.forEach(function (p) {
+        var div = document.createElement("div");
+        div.className = "reel-item" + (p.grand ? " grand" : "");
+        div.textContent = p.text;
+        reelStrip.appendChild(div);
+      });
+
+      var targetY = winningIndex * ITEM_HEIGHT;
+      var currentY = 0;
+      reelStrip.style.transform = "translateY(0px)";
+
+      function easeOutQuint(t) {
+        return 1 - Math.pow(1 - t, 5);
+      }
+
+      var spinning = false;
+
+      spinBtn.addEventListener("click", function () {
+        if (spinning) return;
+        spinning = true;
+        spinBtn.disabled = true;
+
+        var duration = 4800;
+        var start = performance.now();
+        var from = currentY;
+        var to =
+          currentY + extraRounds * fullCycle + (currentY === 0 ? targetY : 0);
+
+        function frame(now) {
+          var elapsed = now - start;
+          var t = Math.min(elapsed / duration, 1);
+          var eased = easeOutQuint(t);
+          var y = from + (to - from) * eased;
+          reelStrip.style.transform = "translateY(-" + y + "px)";
+
+          if (t < 1) {
+            requestAnimationFrame(frame);
+          } else {
+            reelStrip.style.transform = "translateY(-" + targetY + "px)";
+            currentY = targetY;
+            spinning = false;
+            spinBtn.disabled = false;
+            openModal();
+          }
+        }
+
+        requestAnimationFrame(frame);
+      });
+
+      var countdownId = null;
+      var secondsLeft = 180;
+
+      function formatTime(sec) {
+        var m = Math.floor(sec / 60);
+        var s = sec % 60;
+        return (m < 10 ? "0" : "") + m + ":" + (s < 10 ? "0" : "") + s;
+      }
+
+      function openModal() {
+        overlay.classList.add("open");
+        overlay.setAttribute("aria-hidden", "false");
+        secondsLeft = 180;
+        timeSpan.textContent = formatTime(secondsLeft);
+        countdownText.classList.remove("low");
+
+        if (countdownId) clearInterval(countdownId);
+        countdownId = setInterval(function () {
+          secondsLeft -= 1;
+          if (secondsLeft <= 0) {
+            timeSpan.textContent = "00:00";
+            clearInterval(countdownId);
+            countdownId = null;
+            return;
+          }
+          timeSpan.textContent = formatTime(secondsLeft);
+          if (secondsLeft <= 30) {
+            countdownText.classList.add("low");
+          }
+        }, 1000);
+      }
+
+      claimBtn.addEventListener("click", function () {
+        window.location.href = "https://www.m3.today/ms-my/?ref=I0385EDD2";
+      });
+    })();
+  </script>
+</body>
+</html>
